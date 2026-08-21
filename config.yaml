@@ -1,0 +1,124 @@
+# =========================================================
+# config.yaml
+# Configuração central da automação de alertas de monitoramento
+# Zabbix/Grafana -> VerdanDesk -> Notion -> IA (Claude/ChatGPT)
+# =========================================================
+
+monitoring:
+  sources:
+    - name: zabbix
+      enabled: true
+      webhook_url: "${ZABBIX_WEBHOOK_URL}"
+      severity_map:
+        disaster: critical
+        high: high
+        average: medium
+        warning: low
+        information: info
+
+    - name: grafana
+      enabled: true
+      webhook_url: "${GRAFANA_WEBHOOK_URL}"
+      severity_map:
+        alerting: high
+        pending: medium
+        ok: resolved
+
+  # Regras de negócio: quais alertas geram ticket automático
+  alert_rules:
+    - trigger: "connection_loss"
+      description: "Perda de conexão / link down"
+      severity: high
+      auto_create_ticket: true
+      sla_minutes: 30
+
+    - trigger: "nobreak_temperature"
+      description: "Temperatura do nobreak acima do limite"
+      severity: critical
+      auto_create_ticket: true
+      sla_minutes: 15
+
+    - trigger: "disk_usage"
+      description: "Uso de disco acima de 90%"
+      severity: medium
+      auto_create_ticket: true
+      sla_minutes: 120
+
+    - trigger: "cpu_high"
+      description: "Uso de CPU acima de 85% por mais de 10 min"
+      severity: medium
+      auto_create_ticket: false   # apenas loga no Notion, não abre ticket
+      sla_minutes: null
+
+# =========================================================
+# Integração com o VerdanDesk (sistema de chamados)
+# =========================================================
+verdandesk:
+  api_base_url: "https://api.verdandesk.exemplo.com/v1"
+  api_token: "${VERDANDESK_API_TOKEN}"
+  default_queue: "NOC - Infraestrutura"
+  ticket_template:
+    title: "[{severity}] {trigger} - {host}"
+    body: |
+      Alerta originado em: {source}
+      Host: {host}
+      Severidade: {severity}
+      Descrição: {description}
+      Horário: {timestamp}
+
+      Resumo gerado por IA:
+      {ai_summary}
+
+# =========================================================
+# Integração com o Notion (base de conhecimento e histórico)
+# =========================================================
+notion:
+  api_token: "${NOTION_API_TOKEN}"
+  database_id: "${NOTION_DATABASE_ID}"
+  properties_map:
+    title: "Nome"
+    status: "Status"
+    severity: "Severidade"
+    host: "Host"
+    source: "Origem"
+    ticket_id: "ID Chamado"
+    created_at: "Criado em"
+    ai_summary: "Resumo IA"
+    ai_recommendation: "Recomendação IA"
+
+# =========================================================
+# Integração com IA (Claude ou ChatGPT) para triagem e resumo
+# =========================================================
+ai_assistant:
+  provider: "claude"          # ou "openai"
+  model: "claude-sonnet-4-6"  # ou "gpt-4.1", conforme o provider
+  api_key: "${AI_API_KEY}"
+  max_tokens: 400
+  tasks:
+    - classify_severity      # reclassifica severidade com base no histórico
+    - summarize_alert        # gera resumo curto e claro do alerta
+    - suggest_first_response # sugere primeira ação de troubleshooting
+  prompt_template: |
+    Você é um assistente de NOC. Recebeu o seguinte alerta de monitoramento:
+
+    Origem: {source}
+    Host: {host}
+    Trigger: {trigger}
+    Severidade original: {severity}
+    Descrição: {description}
+
+    Gere:
+    1) Um resumo objetivo em até 2 frases.
+    2) Uma sugestão de primeira ação de diagnóstico.
+    3) A severidade que você recomendaria (baixa/média/alta/crítica) e por quê.
+
+# =========================================================
+# Configurações gerais de execução
+# =========================================================
+runtime:
+  poll_interval_seconds: 60
+  log_level: "INFO"
+  timezone: "America/Sao_Paulo"
+  retry:
+    max_attempts: 3
+    backoff_seconds: 10
