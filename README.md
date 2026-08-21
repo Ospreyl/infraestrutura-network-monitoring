@@ -72,7 +72,7 @@ python automation.py
 O script já inclui um alerta de exemplo (`nobreak_temperature`) para
 demonstrar o fluxo ponta a ponta sem precisar de um webhook real.
 
-##  Possíveis evoluções
+##  Possíveis evoluções futuras
 
 - Expor um endpoint (Flask/FastAPI) para receber os webhooks do Zabbix/Grafana em tempo real
 - Adicionar deduplicação de alertas recorrentes (evitar ticket duplicado)
