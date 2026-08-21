@@ -216,3 +216,19 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Secrets and credentials
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Logs
+*.log
+logs/
